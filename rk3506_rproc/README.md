@@ -15,7 +15,7 @@ I used kernel from rockchip: [github.com/rockchip-linux/kernel/tree/develop-6.1]
 
 My kernel configuration is here: [../test-configs/kernel-6.1](../test-configs/kernel-6.1)
 
-Having a compiled kernel with this config (remote processor enabled), then this module compiles with a simple `make`.
+If the kernel compiled with this config (remote processor enabled) a simple `make` here compiles the `rk3506_rproc.ko` kernel module.
 
 ## Usage
 
