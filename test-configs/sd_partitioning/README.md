@@ -1,4 +1,4 @@
-#Partitioning the SDCARD
+# Partitioning the SDCARD
 
 **WARNING: my SD-Card was at /dev/sdb, but you have to adjust the scripts according to your device id,
 otherwise you can easily destroy your disk at /dev/sdb**
