@@ -1,0 +1,8 @@
+this .bin file must be copied to the sector offset 64.
+
+Example:
+
+sudo dd if=rk3506_idblock_v1.04.110.img of=/dev/sdxx bs=512 seek=64
+
+With sdb:
+dd if=rk3506_idblock_v1.04.110.img of=/dev/sdb bs=512 seek=64
