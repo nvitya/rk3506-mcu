@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "Executing rc.local"
+
+echo "none" > /sys/class/leds/work-led/trigger
+
+exit 0
