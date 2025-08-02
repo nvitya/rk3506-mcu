@@ -10,15 +10,17 @@ The code (.text) segment is 28 Bytes long, placed at 0x0000.
 The data (.data) segment is 12 Bytes long, placed at 0x0100.
 
 The data segment consists of three 32-bit words:
+```
 0x0100: marker = 0x12345678
 0x0104: gcounter_inc: incrementing counter
 0x0108: gcounter_dec: decrementing counter
-
-You can examine the data segment from the Linux using these addresses: 
+```
+As the MCU runs from the SRAM at 0xFFF84000, you can examine the data segment from the Linux using these addresses: 
+```
 0xFFF84100: marker = 0x12345678
 0xFFF84104: gcounter_inc: incrementing counter
 0xFFF84108: gcounter_dec: decrementing counter
-
+```
 I recommend to use the `devmem` utility.
 
 ## Main Source Code
