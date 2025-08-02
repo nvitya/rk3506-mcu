@@ -4,6 +4,36 @@
 
 I've seen, that the remote processor drivers are actually pretty simple and short so I decided to create one for the rk3506. The ChatGPT could even generate me the base skeleton, and observing the Cvitek driver (Milk-V Duo) I made some adjustments, like ELF loading. I added clock and reset signal handling supported by the device-tree.
 
+The whole code is actually in only a simple file in [rk3506_rproc.c](rk3506_rproc.c).
+
+## Compilation
+This is an off-tree kernel module, you have to use the same compiler for the main kernel and for this module.
+I just used the default `arm-linux-gnueabihf-gcc` provided my Ubuntu 24.04 from package `gcc-9-arm-linux-gnueabihf`.
+
+To compile this module you have to create a symlink with the name `kernel-source' pointing to the kernel source.
+I used kernel from rockchip: [github.com/rockchip-linux/kernel/tree/develop-6.1](https://github.com/rockchip-linux/kernel/tree/develop-6.1)
+
+My kernel configuration is here: [../test-configs/kernel-6.1](../test-configs/kernel-6.1)
+
+Having a compiled kernel with this config (remote processor enabled), then this module compiles with make.
+
+## Usage
+
+The device tree must contain a block for this remote processor, like this:
+```dts
+	mcu_rproc: mcu@fff84000 {
+		compatible = "rockchip,rk3506-mcu";
+		reg = <0xfff84000 0x8000>;
+		firmware-name = "rk3506-m0.elf";
+		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>;
+		clock-names = "hclk_m0", "stclk_m0";
+		resets = <&cru SRST_H_M0>, <&cru SRST_M0_JTAG>, <&cru SRST_HRESETN_M0_AC>;
+		reset-names = "h_m0", "m0_jtag", "hresetn_m0_ac";
+	};
+```
+
+Here is the one I used: [../test-configs/dts/rk3506g-luckfox-lyra-plus-sd-nodisp.dts](../test-configs/dts/rk3506g-luckfox-lyra-plus-sd-nodisp.dts)
+
 ## Accessing Information about the rk3506
 
 Unfortunately at the beginning it was hard to get any information about the RK3506 because the Reference Manual
