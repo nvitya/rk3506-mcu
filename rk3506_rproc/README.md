@@ -72,7 +72,16 @@ devmem 0xFFF84100 w
 devmem 0xFFF84104 w
 devmem 0xFFF84108 w
 ```
-Unfortunately I did not get the MCU running so the `0xFFF84104` and `0xFFF84108` addresses showed me only zeroes (the initial values).
+Unfortunately I did not get the MCU running so the `0xFFF84104` and `0xFFF84108` addresses showed me only zeroes (the initial values):
+```
+root@qemuarm:~# devmem 0xFFF84100 w
+12345678
+root@qemuarm:~# devmem 0xFFF84104 w
+00000000
+root@qemuarm:~# devmem 0xFFF84108 w
+00000000
+root@qemuarm:~#
+```
 
 ## Accessing Information about the rk3506
 
