@@ -1,0 +1,9 @@
+The u-boot.itb must be copied to the SDCARD to the sector offset 16384.
+It is better to create a special partition for that (as partition 1):
+
+sudo dd if=uboot.itb of=/dev/sdX1
+sudo sync
+
+with sdb:
+dd if=uboot.itb of=/dev/sdb1
+sync
