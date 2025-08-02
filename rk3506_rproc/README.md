@@ -19,6 +19,7 @@ Having a compiled kernel with this config (remote processor enabled), then this 
 
 ## Usage
 
+### Device Tree
 The device tree must contain a block for this remote processor, like this:
 ```dts
 	mcu_rproc: mcu@fff84000 {
@@ -34,17 +35,20 @@ The device tree must contain a block for this remote processor, like this:
 
 Here is the one I used: [../test-configs/dts/rk3506g-luckfox-lyra-plus-sd-nodisp.dts](../test-configs/dts/rk3506g-luckfox-lyra-plus-sd-nodisp.dts)
 
+### MCU Firmware
+You can copy [my simple simple test firmware at mcu_firmware/mcu_min_asm/RK3506_M0/rk3506_min_asm.elf](../mcu_firmware/mcu_min_asm/RK3506_M0/rk3506_min_asm.elf) to `/lib/firmware/rk3506-m0.elf`. As I was lazy to rename, I created a symlink in the `/lib/firmware`:
+```
+/etc/firmware# ln -s rk3506_min_asm.elf rk3506-m0.elf
+```
+Later the nicer method is to set the firmware name through `/sys/class/remoteproc/remoteproc0/firmware`.
+This works only after the kernel module is loaded.
+
+### Loading the RemoteProcessor Kernel Module
 The compiled kernel module `rk3506_rproc.ko` must be copied to the target device, and loaded with:
 ```
 insmod rk3506_rproc.ko
 ```
-
-Loading this module tries to load the MCU firmware from `/lib/firmware/rk3506-m0.elf`. 
-You can copy [my simple simple test firmware at mcu_firmware/mcu_min_asm/RK3506_M0/rk3506_min_asm.elf](../mcu_firmware/mcu_min_asm/RK3506_M0/rk3506_min_asm.elf) to here. As I was lazy to rename, I created a symlink:
-```
-/etc/firmware# ln -s rk3506_min_asm.elf rk3506-m0.elf
-```
-But there are multiple methods, the nicest one to set the firmware name through `/sys/class/remoteproc/remoteproc0/firmware`.
+Loading this module tries to load and start the MCU firmware from `/lib/firmware/rk3506-m0.elf`. 
 
 ## Accessing Information about the rk3506
 
