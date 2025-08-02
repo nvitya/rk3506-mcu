@@ -1,8 +1,7 @@
-# rk3506-mcu
-Tools and notes how to use the Cortex-M0 MCU core on the Rockchip rk3506
-
 # Status: Help Needed!
-The remote processor driver is still not working, it is unable to start the FW on the Cortex-M0 core.
+The remote processor driver here is still not working, it can not start the FW on the Cortex-M0 core.
+
+** If you have some idea or question please create an issue hier on this github page. **
 
 # Introduction
 
@@ -16,8 +15,14 @@ I've already implemented this external ADC sampling on a Milk-V Duo. For the Mil
 remote processor driver for their linux. With this remote processor driver, the "MCU" bare-metal code can be loaded, started and stopped
 using the kernel file interface at `/sys/class/remoteproc/remoteproc0`. This is the recommended way controlling an extra processor, implemented by big names like ST, NXP or Ti.
 
-# Remote Processor Driver for rk3506
+# Remote Processor Driver for the rk3506
 
-to be continued
+Unfortunately the neither the chip manufacturer (Rockchip) nor the board manufacturer provides remote processor driver for the rk3506 (or any Rockchip SoCs).
+Unfortunately I could not find any working example using the MCU Core. There are some traces in the rockchip u-boot source code which loads a special amp.img 
+but I don't know how to get it working.
 
-(I bougt a Luckfox Lyra Plus for the testing.)
+# Testing
+
+I bougt a Luckfox Lyra Plus for the testing.
+I included the stuff I use for testing into the subdirectory `test-configs`.
+
