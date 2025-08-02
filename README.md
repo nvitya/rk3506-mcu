@@ -1,6 +1,13 @@
 # Status: Help Needed!
-The remote processor driver here is still not working, it can not start the FW on the Cortex-M0 core.
-I've created a very simple [MCU Test FW](mcu_firmware) which just increments variables in the SRAM.
+[My remote processor driver for the rk3506](rk3506_rproc) is still not working, it can not start the FW on the Cortex-M0 core.
+I've also created a very simple [MCU Test FW](mcu_firmware) to test it.
+
+## What can be wrong?
+* Maybe additional clocks are missing
+* Additional resets must be controlled
+* Additional trusted FW calls are missing
+* u-boot configuration is missing?
+* kernel configuration is missing?
 
 **If you have some idea or question please create an issue hier on this github page.**
 
