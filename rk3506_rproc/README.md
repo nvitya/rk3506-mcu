@@ -45,4 +45,5 @@ int fit_standalone_release(char *id, uintptr_t entry_point)
 }
 ```
 
+The `sip_smc_mcu_config()` I think is an call to a closed-source ARM Trusted Firmware provided by Rockchip.
 
