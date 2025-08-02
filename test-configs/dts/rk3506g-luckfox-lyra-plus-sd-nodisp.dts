@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3506-luckfox-lyra.dtsi"
+
+/ {
+	model = "Luckfox Lyra Plus";
+	compatible = "rockchip,rk3506g-demo-display-control", "rockchip,rk3506";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=tty1 console=ttyFIQ0 storagemedia=sd root=/dev/mmcblk0p3 rootfstype=ext4 rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+	};
+
+	mcu_rproc: mcu@fff84000 {
+		compatible = "rockchip,rk3506-mcu";
+		reg = <0xfff84000 0x8000>;
+		firmware-name = "rk3506-m0.elf";
+		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>;
+		clock-names = "hclk_m0", "stclk_m0";
+		resets = <&cru SRST_H_M0>, <&cru SRST_M0_JTAG>, <&cru SRST_HRESETN_M0_AC>;
+		reset-names = "h_m0", "m0_jtag", "hresetn_m0_ac";
+	};
+};
+
+/**********display**********/
+&cma {
+	size = <0x0200000>;
+};
+
+&dsi {
+	status = "disabled";
+};
+
+&dsi_dphy {
+	status = "disabled";
+};
+
+&dsi_in_vop {
+	status = "disabled";
+};
+
+&route_dsi {
+	status = "disabled";
+};
+
+/**********ethernet**********/
+&gmac1 {
+	phy-mode = "rmii";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 20000 100000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth_rmii1_miim_pins &eth_rmii1_tx_bus2_pins &eth_rmii1_rx_bus2_pins &eth_rmii1_clk_pins>;
+
+	phy-handle = <&rmii_phy1>;
+	status = "okay";
+};
+
+&mdio1 {
+	rmii_phy1: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x1>;
+	};
+};
+
+/**********usb**********/
+&usb20_otg0 {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&usb20_otg1 {
+	dr_mode = "host";
+	status = "okay";
+};

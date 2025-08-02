@@ -1,0 +1,4 @@
+Create a symlink here with the name "kernel-source" to your kernel sources.
+
+I was using:
+https://github.com/rockchip-linux/kernel/tree/develop-6.1
