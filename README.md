@@ -1,5 +1,7 @@
 # Status: Help Needed!
-[My remote processor driver for the rk3506](rk3506_rproc) is still not working, it can not start the FW on the Cortex-M0 core.
+[My remote processor driver for the rk3506](rk3506_rproc) is still not working fully.
+It loads the MCU FW properly, but the Cortex-M0 core does not gets executing this code at 0xFFF84000.
+
 I've also created a very simple [MCU Test FW](mcu_firmware) to test it.
 
 ## What can be wrong?
