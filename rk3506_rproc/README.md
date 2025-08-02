@@ -15,7 +15,7 @@ I used kernel from rockchip: [github.com/rockchip-linux/kernel/tree/develop-6.1]
 
 My kernel configuration is here: [../test-configs/kernel-6.1](../test-configs/kernel-6.1)
 
-Having a compiled kernel with this config (remote processor enabled), then this module compiles with make.
+Having a compiled kernel with this config (remote processor enabled), then this module compiles with a simple `make`.
 
 ## Usage
 
@@ -33,6 +33,18 @@ The device tree must contain a block for this remote processor, like this:
 ```
 
 Here is the one I used: [../test-configs/dts/rk3506g-luckfox-lyra-plus-sd-nodisp.dts](../test-configs/dts/rk3506g-luckfox-lyra-plus-sd-nodisp.dts)
+
+The compiled kernel module `rk3506_rproc.ko` must be copied to the target device, and loaded with:
+```
+insmod rk3506_rproc.ko
+```
+
+Loading this module tries to load the MCU firmware from `/lib/firmware/rk3506-m0.elf`. 
+You can copy [my simple simple test firmware at mcu_firmware/mcu_min_asm/RK3506_M0/rk3506_min_asm.elf](../mcu_firmware/mcu_min_asm/RK3506_M0/rk3506_min_asm.elf) to here. As I was lazy to rename, I created a symlink:
+```
+/etc/firmware# ln -s rk3506_min_asm.elf rk3506-m0.elf
+```
+But there are multiple methods, the nicest one to set the firmware name through `/sys/class/remoteproc/remoteproc0/firmware`.
 
 ## Accessing Information about the rk3506
 
