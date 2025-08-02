@@ -50,6 +50,30 @@ insmod rk3506_rproc.ko
 ```
 Loading this module tries to load and start the MCU firmware from `/lib/firmware/rk3506-m0.elf`. 
 
+## Examining the Cortex-M Code Running
+### Getting devmem
+You can easily cross compile the devmem project from github: [github.com/byates/devmem](https://github.com/byates/devmem/tree/master)
+I've just added this line at the beginning of the `Makefile`:
+```
+CC = arm-linux-gnueabihf-gcc
+```
+Copy the compiled devmem binary to the target into `/usr/bin/devmem`.
+
+### Checking memory
+As the MCU runs from the SRAM at 0xFFF84000, you can examine the data segment of the MCU Test code from the Linux using these addresses: 
+```
+0xFFF84100: marker = 0x12345678
+0xFFF84104: gcounter_inc: incrementing counter
+0xFFF84108: gcounter_dec: decrementing counter
+```
+I recommend to use the devmem utility to test the marker and the counters:
+```
+devmem 0xFFF84100 w
+devmem 0xFFF84104 w
+devmem 0xFFF84108 w
+```
+Unfortunately I did not get the MCU running so the `0xFFF84104` and `0xFFF84108` addresses showed me only zeroes (the initial values).
+
 ## Accessing Information about the rk3506
 
 Unfortunately at the beginning it was hard to get any information about the RK3506 because the Reference Manual
