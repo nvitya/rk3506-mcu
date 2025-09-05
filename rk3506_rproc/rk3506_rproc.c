@@ -77,8 +77,29 @@ struct resource_table *rproc_elf_find_loaded_rsc_table(struct rproc * rproc, con
 #define ROCKCHIP_SIP_CONFIG_MCU_SRAM_START_ADDR		0x03
 #define ROCKCHIP_SIP_CONFIG_MCU_EXSRAM_START_ADDR	0x04
 
-#define RK3506_MCU_TCM_ADDR                       0xfff84000
-#define RK3506_MCU_TCM_SIZE                       0x8000
+#define RK3506_MCU_TCM_ADDR                 0xFFF84000
+#define RK3506_MCU_TCM_SIZE                     0x8000
+
+#define RK3506_MCU_SHMEM_ADDR               0x03C00000
+#define RK3506_MCU_SHMEM_SIZE                 0x100000
+
+// the register definitions of the beginning of the PMU
+//
+typedef struct
+{
+  volatile uint32_t VERSION;            // Offset: 0x0000
+  volatile uint32_t PWR_CON;            // Offset: 0x0004
+  volatile uint32_t GLB_POWER_STS;      // Offset: 0x0008
+  volatile uint32_t INT_MASK_CON;       // Offset: 0x000C  <- MCU reset + MCU int mask
+  volatile uint32_t WAKEUP_INT_CON;     // Offset: 0x0010
+  volatile uint32_t WAKEUP_INT_ST;      // Offset: 0x0014
+           uint32_t _reserved_018[2];   // Offset: 0x0018
+//
+} rk3506_pmu_regs_t;
+
+#define RK3506_PMU_BASE   0xFF900000
+#define RK3506_CRU_BASE   0xFF9A0000
+#define RK3506_GRF_BASE   0xFF288000
 
 typedef struct
 {
@@ -90,102 +111,192 @@ typedef struct
   struct reset_control *    rst_m0_jtag;
   struct reset_control *    rst_hresetn_m0_ac;
 
-  void __iomem *            tcm_virt;
+  uint8_t *                 tcm_virt;
   phys_addr_t               tcm_phys;
+
+  // iomapped peripherals, using uint8_t for natural offsets
+  uint8_t *                 regs_PMU;  // FF900
+  uint8_t *                 regs_CRU;  // FF9A0
+  uint8_t *                 regs_GRF;  // FF288
+
+  uint8_t *                 shmem_virt;  // 0x03C00000
 
   struct platform_device *  pdev;
 //
 } rk3506_mcu_t;
 
+
+/* Original, working MCU starter from the Rockchip U-Boot source code:
+
+int fit_standalone_release(char *id, uintptr_t entry_point)
+{
+	// address map: map 0 to sram, enable TCM mode for sram
+	// 0xfff84000 for sram
+	// 0x03e00000 for ddr
+
+	sip_smc_mcu_config(ROCKCHIP_SIP_CONFIG_BUSMCU_0_ID,
+		ROCKCHIP_SIP_CONFIG_MCU_CODE_START_ADDR,
+		entry_point);
+
+
+	// bus m0 configuration:
+	//   open m0 swclktck & hclk
+	writel(0x0c000000, CRU_BASE + CRU_GATE_CON5);
+
+	// set m0 system time calibration GRF->GRF_SOC_CON36
+	writel(0xbcd3d80, 0xff288090);
+
+	// enable m0 interrupt: PMU->PMU_INT_MASK_CON mcu_rst_dis_cfg=1,glb_int_mask_mcu=0
+	writel(0x00060004, 0xff90000c);
+
+	// select jtag m1 GPIO0C6 GPIO0C7
+	//writel(0x00220000, 0xff960000);
+	//writel(0x00300020, 0xff288000);
+	//writel(0x00ff0022, 0xff4d8064);
+	//writel(0xff002200, 0xff950014);
+	return 0;
+}
+
+*/
+
+static void rk3506_rproc_mcu_run(rk3506_mcu_t * mcu, bool arun)
+{
+  if (arun)
+  {
+    // Release the M0 reset + enable the M0 interrupts (mcu_rst_dis_cfg=1,glb_int_mask_mcu=0)
+    writel(0x00060004, mcu->regs_PMU + 0x00C);  // offset 0x00C = PMU_INT_MASK_CON
+  }
+  else
+  {
+    // Assert the M0 reset + disable the M0 interrupts (mcu_rst_dis_cfg=0, glb_int_mask_mcu=1)
+    writel(0x00060002, mcu->regs_PMU + 0x00C);  // offset 0x00C = PMU_INT_MASK_CON
+  }
+}
+
 static int rk3506_rproc_start(struct rproc * rproc)
 {
   rk3506_mcu_t *        mcu = rproc->priv;
   struct arm_smccc_res  res;
+  uint32_t              mcu_entry = 0xFFF84000;  // the code here should start with the ARM Cortex-M vector table
 
-  dev_info(&rproc->dev, "Starting FW at 0x%08X...", (uint32_t)rproc->bootaddr);
+  dev_info(&rproc->dev, "Starting M0 MCU at 0x%08X...", mcu_entry);
 
-#if 0
-  arm_smccc_smc(SIP_MCU_CFG, ROCKCHIP_SIP_CONFIG_BUSMCU_0_ID,
-                ROCKCHIP_SIP_CONFIG_MCU_SRAM_START_ADDR,
-                0xfff84000,
-                0, 0, 0, 0, &res);
-  if (res.a0)
-  {
-    dev_err(&rproc->dev, "SMCCC SRAM start call error: %i", (int)res.a0);
-  }
-#endif
+  // WARNING: this call makes the SRAM at 0xFFF84000 inaccessible !
 
   /* address map: map 0 to sram, enable TCM mode for sram
    * 0xfff84000 for sram
    * 0x03e00000 for ddr */
   arm_smccc_smc(SIP_MCU_CFG, ROCKCHIP_SIP_CONFIG_BUSMCU_0_ID,
                 ROCKCHIP_SIP_CONFIG_MCU_CODE_START_ADDR,
-                rproc->bootaddr,
+                mcu_entry,
                 0, 0, 0, 0, &res);
   if (res.a0)
   {
     dev_err(&rproc->dev, "SMCCC CODE START call error: %i", (int)res.a0);
+    return -1;
   }
 
+#if 0
   reset_control_deassert(mcu->rst_m0_jtag);
   reset_control_deassert(mcu->rst_h_m0);
   reset_control_deassert(mcu->rst_hresetn_m0_ac);
 
+  // enable hclk_m0 + swclktck_m0
+  writel(0x0c000000, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
+
+	// set m0 system time calibration GRF->GRF_SOC_CON36
+	writel(0xbcd3d80, mcu->regs_GRF + 0x090);  // value taken from Rockchip U-Boot source code
+#endif
+
+  rk3506_rproc_mcu_run(mcu, true);
   return 0;
 }
 
 static int rk3506_rproc_stop(struct rproc * rproc)
 {
   rk3506_mcu_t *        mcu = rproc->priv;
+  //struct arm_smccc_res  res;
 
-  reset_control_assert(mcu->rst_m0_jtag);
-  reset_control_assert(mcu->rst_h_m0);
-  reset_control_assert(mcu->rst_hresetn_m0_ac);
+  dev_info(&rproc->dev, "Stopping M0 MCU");
+
+  rk3506_rproc_mcu_run(mcu, false);
+
+#if 0
+  // Disable M0 TCM to be accessible from here
+  arm_smccc_smc(SIP_MCU_CFG, ROCKCHIP_SIP_CONFIG_BUSMCU_0_ID,
+                ROCKCHIP_SIP_CONFIG_MCU_CODE_START_ADDR,
+                0xFFF8C000,
+                0, 0, 0, 0, &res);
+  if (res.a0)
+  {
+    dev_err(&rproc->dev, "SMCCC MCU TCM Unmap error: %i", (int)res.a0);
+  }
+#endif
 
   return 0;
 }
 
-#if 0
+#define FW_FORMAT_BIN 1
+
+#if FW_FORMAT_BIN
+
 static int rk3506_rproc_load(struct rproc * rproc, const struct firmware * fw)
 {
   rk3506_mcu_t *  mcu = rproc->priv;
 
   if (fw->size > RK3506_MCU_TCM_SIZE)
-      return -EINVAL;
-
+  {
+    dev_err(&rproc->dev, "M0 MCU FW is too big: size=%u", (uint32_t)fw->size);
+    return -EINVAL;
+  }
   dev_info(&rproc->dev, "Loading FW: virt_addr=0x%08X, size=%u", (uint32_t)mcu->tcm_virt, (uint32_t)fw->size);
-  dev_info(&rproc->dev, "FW Entry: 0x%08X", (uint32_t)rproc->bootaddr);
 
   memcpy_toio(mcu->tcm_virt, fw->data, fw->size);
   return 0;
 }
-#endif
+
+#else
 
 static void * my_da_to_va(struct rproc * rproc, u64 da, size_t len, bool * is_iomem)
 {
   rk3506_mcu_t *  mcu = rproc->priv;
   void __iomem * va;
 
-  // Only allow mapping of addresses starting from 0
-  if (da + len >= 0x8000)
-      return NULL;
+  if (da + len <= 0x8000)  // change TCM local addresses
+  {
+    va = mcu->tcm_virt + da;  // mapped base + offset
+  }
+  else if ((da <= RK3506_MCU_SHMEM_ADDR) && (len <= RK3506_MCU_SHMEM_SIZE))
+  {
+    va = mcu->shmem_virt + (da - RK3506_MCU_SHMEM_ADDR);  // mapped base + offset
+  }
+  else
+  {
+    dev_err(&rproc->dev, "Invalid rproc address: 0x%08X, len=%d", (uint32_t)da, len);
+    va = NULL;
+  }
 
-  va = mcu->tcm_virt + da;  // mapped base + offset
   return va;
 }
+
+#endif
 
 static const struct rproc_ops rk3506_rproc_ops =
 {
   .start = rk3506_rproc_start,
   .stop = rk3506_rproc_stop,
+
+#if FW_FORMAT_BIN
+  .load = rk3506_rproc_load,
+#else
   .da_to_va = my_da_to_va,
-  //.load = rk3506_rproc_load,
 	.load = rproc_elf_load_segments,
 	// .parse_fw = rk3506_rproc_parse_fw,
-
 	.find_loaded_rsc_table = rproc_elf_find_loaded_rsc_table,
 	.sanity_check = rproc_elf_sanity_check,
 	.get_boot_addr = rproc_elf_get_boot_addr,
+#endif
+
 };
 
 static const char * rk3506_rproc_get_firmware(struct platform_device * pdev)
@@ -205,7 +316,7 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
 {
   struct rproc *      rproc;
   rk3506_mcu_t *      mcu;
-  struct resource *   res;
+  //struct resource *   res;
   int                 ret;
 	const char *        firmware;
 
@@ -225,15 +336,23 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
   mcu = rproc->priv;
   mcu->rproc = rproc;
 
-  res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-  mcu->tcm_virt = devm_ioremap_resource(&pdev->dev, res);
+  //res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+  //mcu->tcm_virt = devm_ioremap_resource(&pdev->dev, res);
+
+  mcu->tcm_phys = RK3506_MCU_TCM_ADDR;
+  mcu->tcm_virt = ioremap(RK3506_MCU_TCM_ADDR, RK3506_MCU_TCM_SIZE);
   if (IS_ERR(mcu->tcm_virt))
   {
     rproc_free(rproc);
     return PTR_ERR(mcu->tcm_virt);
   }
+  mcu->shmem_virt = ioremap(RK3506_MCU_SHMEM_ADDR, RK3506_MCU_SHMEM_SIZE);
 
-  mcu->tcm_phys = res->start;
+  // make the PMU accessible for this module
+  mcu->regs_PMU = ioremap(RK3506_PMU_BASE, 4096);
+  mcu->regs_CRU = ioremap(RK3506_CRU_BASE, 4096);
+  mcu->regs_GRF = ioremap(RK3506_GRF_BASE, 4096);
+
   mcu->pdev = pdev;
 
   // clocks
@@ -281,12 +400,37 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
   if (ret)
     return ret;
 
+  rk3506_rproc_mcu_run(mcu, false);  // ensure that the MCU is in reset !
+
   clk_prepare_enable(mcu->hclk_m0);
   clk_prepare_enable(mcu->stclk_m0);
 
   reset_control_deassert(mcu->rst_m0_jtag);
+  reset_control_deassert(mcu->rst_h_m0);
+  reset_control_deassert(mcu->rst_hresetn_m0_ac);
+
+  // enable hclk_m0 + swclktck_m0
+  writel(0x0c000000, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
+
+	// set m0 system time calibration GRF->GRF_SOC_CON36
+	writel(0xbcd3d80, mcu->regs_GRF + 0x090);  // value taken from Rockchip U-Boot source code
 
   return ret;
+}
+
+static void rk3506_rproc_shutdown(struct platform_device * pdev)
+{
+  struct rproc *   rproc = platform_get_drvdata(pdev);
+  rk3506_mcu_t *   mcu = rproc->priv;
+
+  rk3506_rproc_stop(rproc);
+
+  // disable hclk_m0 + swclktck_m0
+  writel(0x0c0000c0, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
+
+  reset_control_assert(mcu->rst_m0_jtag);
+  reset_control_assert(mcu->rst_h_m0);
+  reset_control_assert(mcu->rst_hresetn_m0_ac);
 }
 
 static int rk3506_rproc_remove(struct platform_device * pdev)
@@ -294,11 +438,20 @@ static int rk3506_rproc_remove(struct platform_device * pdev)
   struct rproc *   rproc = platform_get_drvdata(pdev);
   rk3506_mcu_t *   mcu = rproc->priv;
 
-  rproc_del(rproc);
+  rk3506_rproc_shutdown(pdev);
+
+  if (mcu->tcm_virt)    iounmap(mcu->tcm_virt);
+  if (mcu->shmem_virt)  iounmap(mcu->shmem_virt);
+
+  if (mcu->regs_PMU)    iounmap(mcu->regs_PMU);
+  if (mcu->regs_CRU)    iounmap(mcu->regs_CRU);
+  if (mcu->regs_GRF)    iounmap(mcu->regs_GRF);
+
   clk_disable_unprepare(mcu->stclk_m0);
 	clk_disable_unprepare(mcu->hclk_m0);
-  rproc_free(rproc);
 
+  rproc_del(rproc);
+  rproc_free(rproc);
   return 0;
 }
 
@@ -312,7 +465,8 @@ MODULE_DEVICE_TABLE(of, rk3506_rproc_match);
 static struct platform_driver rk3506_rproc_driver =
 {
   .probe = rk3506_rproc_probe,
-  .remove = rk3506_rproc_remove,
+  .remove = rk3506_rproc_remove,  // when the module unloaded
+  .shutdown = rk3506_rproc_shutdown,  // when the system shut down or restarted
   .driver = {
     .name = "rk3506_mcu_rproc",
     .of_match_table = rk3506_rproc_match,
