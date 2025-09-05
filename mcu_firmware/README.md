@@ -21,8 +21,12 @@ As the MCU runs from the SRAM at 0xFFF84000, you can examine the data segment fr
 0xFFF84104: gcounter_inc: incrementing counter
 0xFFF84108: gcounter_dec: decrementing counter
 ```
-I recommend to use the `devmem` utility.
-
+I recommend to use the devmem utility to test the marker and the counters:
+```
+devmem 0xFFF84100 w
+devmem 0xFFF84104 w
+devmem 0xFFF84108 w
+```
 ## Main Source Code
 ```ASM
     .section .text

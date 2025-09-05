@@ -12,11 +12,11 @@ Compiling the rootfs took about an hour on my 8-Core PC.
 After the root image extracted, the /etc must be adjusted.
 I was too lazy to include these changes into the yocto.
 
-The most important is the /etc/inittab. I include this file here.
+The most important is the /etc/inittab. I include this file in the **overwrite subdirectory**.
 
 With this at least you can log-in, enter root, without password (standard yocto).
 
-There were no proper init scripts in the yocto-generated rootfs, so I created these manually:
+There were no proper init script setup in the yocto-generated rootfs, so I created these symlinks manually:
 
 ```
 /etc/rcS.d/S01syslog    -> ../init.d/syslog
