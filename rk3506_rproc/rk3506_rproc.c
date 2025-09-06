@@ -4,6 +4,7 @@
 // Copyright (c) Viktor Nagy <nvitya@gmail.com>
 // first version published at https://github.com/nvitya/rk3506-mcu
 
+#define FW_FORMAT_BIN 0
 
 /*
 
@@ -241,8 +242,6 @@ static int rk3506_rproc_stop(struct rproc * rproc)
   return 0;
 }
 
-#define FW_FORMAT_BIN 1
-
 #if FW_FORMAT_BIN
 
 static int rk3506_rproc_load(struct rproc * rproc, const struct firmware * fw)
@@ -440,7 +439,7 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
 static void rk3506_rproc_shutdown(struct platform_device * pdev)
 {
   struct rproc *   rproc = platform_get_drvdata(pdev);
-  rk3506_mcu_t *   mcu = rproc->priv;
+  //rk3506_mcu_t *   mcu = rproc->priv;
 
   rk3506_rproc_stop(rproc);
 
