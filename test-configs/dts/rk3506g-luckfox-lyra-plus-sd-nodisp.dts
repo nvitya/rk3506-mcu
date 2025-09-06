@@ -8,7 +8,7 @@
 #include "rk3506-luckfox-lyra.dtsi"
 
 / {
-	model = "Luckfox Lyra Plus";
+	model = "Luckfox Lyra Plus MCU";
 	compatible = "rockchip,rk3506g-demo-display-control", "rockchip,rk3506";
 
 	chosen {
@@ -19,13 +19,18 @@
 		compatible = "rockchip,rk3506-mcu";
 		reg = <0xfff84000 0x8000>;
 		firmware-name = "rk3506-m0.elf";
-		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>;
-		clock-names = "hclk_m0", "stclk_m0";
+
+    /* for now include the clocks also that required by the MCU FW */
+		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>,
+		         <&cru PCLK_TIMER>, <&cru CLK_TIMER0_CH5>,
+						 <&cru SCLK_UART4>, <&cru PCLK_UART4>;
+
 		resets = <&cru SRST_H_M0>, <&cru SRST_M0_JTAG>, <&cru SRST_HRESETN_M0_AC>;
 		reset-names = "h_m0", "m0_jtag", "hresetn_m0_ac";
 	};
 
   /* this one is used both the u-boot and the kernel */
+/*
 	rockchip_amp: rockchip-amp {
 		compatible = "rockchip,amp";
 		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>,
@@ -34,6 +39,7 @@
 
 		status = "okay";
 	};
+*/
 
 };
 

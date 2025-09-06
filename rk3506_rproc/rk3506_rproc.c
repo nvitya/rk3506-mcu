@@ -13,8 +13,12 @@ Device-tree block:
 		compatible = "rockchip,rk3506-mcu";
 		reg = <0xfff84000 0x8000>;
 		firmware-name = "rk3506-m0.elf";
-		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>;
-		clock-names = "hclk_m0", "stclk_m0";
+
+    // for now include the clocks also that required by the MCU FW
+		clocks = <&cru HCLK_M0>, <&cru STCLK_M0>,
+		         <&cru PCLK_TIMER>, <&cru CLK_TIMER0_CH5>,
+						 <&cru SCLK_UART4>, <&cru PCLK_UART4>;
+
 		resets = <&cru SRST_H_M0>, <&cru SRST_M0_JTAG>, <&cru SRST_HRESETN_M0_AC>;
 		reset-names = "h_m0", "m0_jtag", "hresetn_m0_ac";
 	};
@@ -105,8 +109,9 @@ typedef struct
 {
   struct rproc *            rproc;
 
-  struct clk *              hclk_m0;
-  struct clk *              stclk_m0;
+	struct clk_bulk_data *    clks;
+	int                       num_clks;
+
   struct reset_control *    rst_h_m0;
   struct reset_control *    rst_m0_jtag;
   struct reset_control *    rst_hresetn_m0_ac;
@@ -336,6 +341,14 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
   mcu = rproc->priv;
   mcu->rproc = rproc;
 
+	mcu->num_clks = devm_clk_bulk_get_all(&pdev->dev, &mcu->clks);
+	if (mcu->num_clks < 0)
+  {
+    dev_err(&pdev->dev, "error getting all clocks from the device-tree");
+    rproc_free(rproc);
+		return -ENODEV;
+  }
+
   //res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
   //mcu->tcm_virt = devm_ioremap_resource(&pdev->dev, res);
 
@@ -355,8 +368,24 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
 
   mcu->pdev = pdev;
 
+  // ensure that the MCU is in reset !
+  rk3506_rproc_mcu_run(mcu, false);
+
   // clocks
 
+	ret = clk_bulk_prepare_enable(mcu->num_clks, mcu->clks);
+	if (ret)
+  {
+    dev_err(&pdev->dev, "Error enabling all the specified clocks: %d", ret);
+  }
+
+  // enable hclk_m0 + swclktck_m0
+  writel(0x0c000000, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
+
+	// set m0 system time calibration GRF->GRF_SOC_CON36
+	writel(0xbcd3d80, mcu->regs_GRF + 0x090);  // value taken from Rockchip U-Boot source code
+
+/*
   mcu->hclk_m0 = devm_clk_get(&pdev->dev, "hclk_m0");
   if (IS_ERR(mcu->hclk_m0))
   {
@@ -370,6 +399,7 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
     dev_err(&pdev->dev, "error getting clock: stclk_m0");
     return PTR_ERR(mcu->stclk_m0);
   }
+*/
 
   // resets
 
@@ -394,26 +424,15 @@ static int rk3506_rproc_probe(struct platform_device * pdev)
     return PTR_ERR(mcu->rst_hresetn_m0_ac);
   }
 
+  reset_control_deassert(mcu->rst_m0_jtag);
+  reset_control_deassert(mcu->rst_h_m0);
+  reset_control_deassert(mcu->rst_hresetn_m0_ac);
+
   platform_set_drvdata(pdev, rproc);
 
   ret = rproc_add(rproc);
   if (ret)
     return ret;
-
-  rk3506_rproc_mcu_run(mcu, false);  // ensure that the MCU is in reset !
-
-  clk_prepare_enable(mcu->hclk_m0);
-  clk_prepare_enable(mcu->stclk_m0);
-
-  reset_control_deassert(mcu->rst_m0_jtag);
-  reset_control_deassert(mcu->rst_h_m0);
-  reset_control_deassert(mcu->rst_hresetn_m0_ac);
-
-  // enable hclk_m0 + swclktck_m0
-  writel(0x0c000000, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
-
-	// set m0 system time calibration GRF->GRF_SOC_CON36
-	writel(0xbcd3d80, mcu->regs_GRF + 0x090);  // value taken from Rockchip U-Boot source code
 
   return ret;
 }
@@ -426,11 +445,13 @@ static void rk3506_rproc_shutdown(struct platform_device * pdev)
   rk3506_rproc_stop(rproc);
 
   // disable hclk_m0 + swclktck_m0
-  writel(0x0c0000c0, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
+  //writel(0x0c0000c0, mcu->regs_CRU + 0x814); // offset 0x815 = CRU_GATE_CON5
 
-  reset_control_assert(mcu->rst_m0_jtag);
-  reset_control_assert(mcu->rst_h_m0);
-  reset_control_assert(mcu->rst_hresetn_m0_ac);
+  //reset_control_assert(mcu->rst_m0_jtag);
+  //reset_control_assert(mcu->rst_h_m0);
+  //reset_control_assert(mcu->rst_hresetn_m0_ac);
+
+	//clk_bulk_disable_unprepare(mcu->num_clks, mcu->clks);
 }
 
 static int rk3506_rproc_remove(struct platform_device * pdev)
@@ -446,9 +467,6 @@ static int rk3506_rproc_remove(struct platform_device * pdev)
   if (mcu->regs_PMU)    iounmap(mcu->regs_PMU);
   if (mcu->regs_CRU)    iounmap(mcu->regs_CRU);
   if (mcu->regs_GRF)    iounmap(mcu->regs_GRF);
-
-  clk_disable_unprepare(mcu->stclk_m0);
-	clk_disable_unprepare(mcu->hclk_m0);
 
   rproc_del(rproc);
   rproc_free(rproc);
