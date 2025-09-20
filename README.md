@@ -1,15 +1,13 @@
-# Status: Help Needed!
-[My remote processor driver for the rk3506](rk3506_rproc) is still not working fully.
-It loads the MCU FW properly, but the Cortex-M0 core does not gets executing this code at 0xFFF84000.
+# Status: Partially working
+[My remote processor driver for the rk3506](rk3506_rproc) is already useable.
 
-I've also created a very simple [MCU Test FW](mcu_firmware) to test it.
+It loads the MCU FW properly to the SRAM 0xFFF84000, the Cortex-M0 core starts executing the code.
+Start, stop, restart also works.
 
-## What can be wrong?
-* Maybe additional clocks are missing
-* Additional resets must be controlled
-* Additional trusted FW calls are missing
-* u-boot configuration is missing?
-* kernel configuration is missing?
+The main problem, that the MCU code can not be changed after it started, because the SRAM beacomes unaccessible to the Linux system, and I don't know how to make it accessible again.
+For the MCU unloading probably there is a special trusted FW call, but I don't know which...
+
+The SWD (Serial Wire Debugging) still doesn't work. I assume there is a switch for it in an undocumented/uncaccessible HW.
 
 **If you have some idea or question please create an issue hier on this github page.**
 
@@ -29,19 +27,17 @@ using the kernel file interface at `/sys/class/remoteproc/remoteproc0`. This is 
 # Remote Processor Driver for the rk3506
 
 Unfortunately neither the chip manufacturer (Rockchip) nor the board manufacturer provide remote processor driver for the rk3506 (or any Rockchip SoCs).
-Unfortunately I could not find any working example using the MCU Core. There are some traces in the rockchip u-boot source code which loads a special amp.img 
-but I don't know how to get it working.
-
-Further examining u-boot code, I've seen that some Rockchip provided closed-source ARM Trusted code calls might be necessary to control special part of the rk3506,
+There was an AMP example from Luckfox, which I could get running, and examined it. At this example the MCU code loaded and started by the u-boot.
+This is pretty developer unfriendly. Examining the u-boot code, I've seen that some Rockchip provided closed-source ARM Trusted code calls might be necessary to control special part of the rk3506,
 especially the SRAM mapping (the integrated SRAM can be used as TCM Memory for the MCU Core). So **it seems that the remote processor kernel driver is the only way
 to load/start/stop MCU code on a running Linux**.
 
-I've seen, that these remote processor drivers are pretty simple and short so I decided to create one for the rk3506. This is the main purpose of this this github project. The ChatGPT could even generate me the base skeleton, and observing the Cvitek driver (Milk-V Duo) I made some adjustments, like ELF loading. 
+I've seen, that these remote processor drivers are pretty simple and short so I decided to create one for the rk3506. This is the main purpose of this this github project.
 I added clock and reset signal handling using device-tree support. The source code and some infos is in the [rk3506_rproc subdirectory](rk3506_rproc).
 
 # Testing
 
-I bougt a Luckfox Lyra Plus for the testing.
+I bought a Luckfox Lyra Plus for the testing.
 I included the MCU Test firmware in the subdirectory [mcu_firmware](mcu_firmware).
 I included some description how I set up my rk3506 linux in the subdirectory [test-configs](test-configs).
 
