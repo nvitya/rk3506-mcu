@@ -1,5 +1,5 @@
 # Status
-[My remote processor driver for the rk3506](rk3506_rproc) is already useable.
+[My remote processor driver for the rk3506](rk3506_rproc) is already usable.
 
 It loads the MCU FW properly to the SRAM 0xFFF84000, the Cortex-M0 core starts executing the code.
 Start, stop, restart also works.
