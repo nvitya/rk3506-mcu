@@ -1,15 +1,17 @@
-# Status: Partially working
+# Status
 [My remote processor driver for the rk3506](rk3506_rproc) is already useable.
 
 It loads the MCU FW properly to the SRAM 0xFFF84000, the Cortex-M0 core starts executing the code.
 Start, stop, restart also works.
 
-The main problem, that the MCU code can not be changed after it started, because the SRAM beacomes unaccessible to the Linux system, and I don't know how to make it accessible again.
-For the MCU unloading probably there is a special trusted FW call, but I don't know which...
-
-The SWD (Serial Wire Debugging) still doesn't work. I assume there is a switch for it in an undocumented/uncaccessible HW.
+## Not Working
+* Unloading: the MCU code can not be changed after it started, because the SRAM beacomes unaccessible to the Linux system, and I don't know how to make it accessible again. For the MCU unloading probably there is a special trusted FW call, but I don't know which...
+* The SWD (Serial Wire Debugging) still doesn't work. I assume there is a switch for it in an undocumented/uncaccessible HW.
 
 **If you have some idea or question please create an issue hier on this github page.**
+
+## TODO
+* Processing the resource table to be able to load the MCU code to 0xFFF88000 too (the last SRAM segment). This would allow to use 0xFFF81000 - 0xFFF87FFF SRAM addresses for data exchange.
 
 # Introduction
 
@@ -34,6 +36,12 @@ to load/start/stop MCU code on a running Linux**.
 
 I've seen, that these remote processor drivers are pretty simple and short so I decided to create one for the rk3506. This is the main purpose of this this github project.
 I added clock and reset signal handling using device-tree support. The source code and some infos is in the [rk3506_rproc subdirectory](rk3506_rproc).
+
+# VIHAL Drivers
+
+As I see my remote processor driver working I started developing [VIHAL](github.com/nvitya/vihal) drivers for the RK3506 for embedded development, mainly focusing on Cortex-M0 tasks.
+
+I already integrated the RK3506 into the "blinky" and "uart" tests in the [vihaltests](github.com/nvitya/vihaltests) repository
 
 # Testing
 
