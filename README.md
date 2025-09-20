@@ -39,9 +39,9 @@ I added clock and reset signal handling using device-tree support. The source co
 
 # VIHAL Drivers
 
-As I see my remote processor driver working I started developing [VIHAL](github.com/nvitya/vihal) drivers for the RK3506 for embedded development, mainly focusing on Cortex-M0 tasks.
+As I see my remote processor driver working I started developing [VIHAL](https://github.com/nvitya/vihal) drivers for the RK3506 for embedded development, mainly focusing on Cortex-M0 tasks.
 
-I already integrated the RK3506 into the "blinky" and "uart" tests in the [vihaltests](github.com/nvitya/vihaltests) repository
+I already integrated the RK3506 into the "blinky" and "uart" tests in the [vihaltests](https://github.com/nvitya/vihaltests) repository.
 
 # Testing
 
