@@ -6,7 +6,7 @@ Start, stop, restart also works.
 
 ## Not Working
 * Unloading: once the MCU code is running, the SRAM becomes inaccessible and cannot be modified by the Linux system, and I don't know how to make it accessible again. For the MCU unloading probably there is a special trusted FW call, but I don't know which...
-* The SWD (Serial Wire Debugging) still doesn't work. I assume there is a switch for it in an undocumented/uncaccessible HW.
+* SWD (Serial Wire Debugging): I assume there is a switch for it in an undocumented/uncaccessible HW. (Maybe SGRF_MPU 0xff960000 <= 0x00220000 ?)
 
 **If you have some idea or question please create an issue here on this github page.**
 
