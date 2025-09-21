@@ -3,12 +3,10 @@
 I include some test firmwares made by my VIHAL library here.
 (Currently only for Luckfox Lyra Plus)
 
-blinkled.elf:
-  just blinks the onboard led. At the start it blinks faster, than with 0.5 s.
-
-uart.elf:
-  Does what the blinkled, plus writes to the uart at 1.C2 + 1.C3
-  VIHAL pin initialization code for the UART:
+* **blinkled.elf**: just blinks the onboard led. At the start it blinks faster, than toggles with 0.5 s.
+* **uart.elf**: Does what the blinkled, plus writes to the uart at 1.C2 + 1.C3
+  
+VIHAL pin initialization code for the UART:
 ```
   // using the same pins as the MCU Example from Rockchip
   hwpinctrl.PinSetupRmio(1, PINNUM_C2, RMIO_UART4_TX, 0);
