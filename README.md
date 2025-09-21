@@ -67,6 +67,8 @@ Once my remote processor driver is functioning properly I started developing [VI
 
 I already integrated the RK3506 into the "blinky" and "uart" tests in the [vihaltests](https://github.com/nvitya/vihaltests) repository.
 
+(My VIHAL xode include clock setup, so the rockchip-amp kernel module is not required anymore to run these.)
+
 # Testing
 
 I bought a Luckfox Lyra Plus for the testing.
