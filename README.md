@@ -37,6 +37,30 @@ to load/start/stop MCU code on a running Linux**.
 I've seen, that these remote processor drivers are pretty simple and short so I decided to create one for the rk3506. This is the main purpose of this github project.
 I added clock and reset signal handling using device-tree support. The source code and some info is in the [rk3506_rproc subdirectory](rk3506_rproc).
 
+# Rockchip AMP Example
+
+In the Luckfox SDK there is a build confi "rk3506g_buildroot_spinand_amp_defconfig". This generates a NAND Flash image where the u-boot loads an example code into the Cortex-M0. By default this does nothing else than writing the string "[HAL INFO] Hello RK3506 mcu" once to the UART4_TX at 1.C2.
+
+I've modified this example to continuously send something to the UART:
+```C
+    uint32_t hbcnt = 0;
+    while (1)
+    {
+      HAL_DBG("MCU hbcnt = %d\r\n", hbcnt);
+      HAL_DelayUs(500000);
+      ++hbcnt;
+    }
+```
+This version served as my primary test source for a while.
+
+However, when I attempted to load this code using my remoteproc driver, it failed to start — costing me considerable time to diagnose the root cause.
+
+The Rockchip MCU HAL example does not include clock gating configuration. Instead, it assumes that peripheral clocks (such as those for UART4 and TIMER5) are already enabled externally. While these clocks were active during U-Boot, the Linux kernel later disabled unused clocks—including UART4 and TIMER5 — causing the MCU code to halt unexpectedly.
+
+Rockchip provides a workaround via the rockchip-amp kernel module. This module requires a device tree entry that explicitly lists and re-enables the peripherals used by the MCU firmware — specifically TIMER5 and UART4 in this case.
+
+This is why it's generally better to start the MCU firmware _after_ the kernel has fully initialized: it ensures that the necessary clocks are properly managed and available.
+
 # VIHAL Drivers
 
 Once my remote processor driver is functioning properly I started developing [VIHAL](https://github.com/nvitya/vihal) drivers for the RK3506 for embedded development, mainly focusing on Cortex-M0 tasks.
