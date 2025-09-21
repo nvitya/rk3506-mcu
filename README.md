@@ -39,7 +39,7 @@ I added clock and reset signal handling using device-tree support. The source co
 
 # Rockchip AMP Example
 
-In the Luckfox SDK there is a build confi "rk3506g_buildroot_spinand_amp_defconfig". This generates a NAND Flash image where the u-boot loads an example code into the Cortex-M0. By default this does nothing else than writing the string "[HAL INFO] Hello RK3506 mcu" once to the UART4_TX at 1.C2.
+In the Luckfox SDK there is a build confi "rk3506g_buildroot_spinand_amp_defconfig". This generates a NAND Flash image where the **u-boot** loads an example code into the Cortex-M0 (from a special packed file at a special nand flash address). By default this does nothing else than writing the string "[HAL INFO] Hello RK3506 mcu" once to the UART4_TX at 1.C2.
 
 I've modified this example to continuously send something to the UART:
 ```C
