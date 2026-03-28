@@ -82,8 +82,13 @@ struct resource_table *rproc_elf_find_loaded_rsc_table(struct rproc * rproc, con
 #define ROCKCHIP_SIP_CONFIG_MCU_SRAM_START_ADDR		0x03
 #define ROCKCHIP_SIP_CONFIG_MCU_EXSRAM_START_ADDR	0x04
 
-#define RK3506_MCU_TCM_ADDR                 0xFFF84000
-#define RK3506_MCU_TCM_SIZE                     0x8000
+#if 0 // 32k CODE TCM
+  #define RK3506_MCU_TCM_ADDR                 0xFFF84000
+  #define RK3506_MCU_TCM_SIZE                     0x8000
+#else // 16k CODE TCM
+  #define RK3506_MCU_TCM_ADDR                 0xFFF88000
+  #define RK3506_MCU_TCM_SIZE                     0x4000
+#endif
 
 #define RK3506_MCU_SHMEM_ADDR               0x03C00000
 #define RK3506_MCU_SHMEM_SIZE                 0x100000
@@ -183,7 +188,7 @@ static int rk3506_rproc_start(struct rproc * rproc)
 {
   rk3506_mcu_t *        mcu = rproc->priv;
   struct arm_smccc_res  res;
-  uint32_t              mcu_entry = 0xFFF84000;  // the code here should start with the ARM Cortex-M vector table
+  uint32_t              mcu_entry = RK3506_MCU_TCM_ADDR;  // the code here should start with the ARM Cortex-M vector table
 
   dev_info(&rproc->dev, "Starting M0 MCU at 0x%08X...", mcu_entry);
 
@@ -266,7 +271,7 @@ static void * my_da_to_va(struct rproc * rproc, u64 da, size_t len, bool * is_io
   rk3506_mcu_t *  mcu = rproc->priv;
   void __iomem * va;
 
-  if (da + len <= 0x8000)  // change TCM local addresses
+  if (da + len <= RK3506_MCU_TCM_SIZE)  // change TCM local addresses
   {
     va = mcu->tcm_virt + da;  // mapped base + offset
   }
